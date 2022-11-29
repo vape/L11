@@ -33,10 +33,26 @@ namespace L11
 
         internal static Config Locate()
         {
-            return Resources.Load<Config>(FileName);
+            var loadedObjects = Resources.FindObjectsOfTypeAll<Config>();
+            var instance = loadedObjects.Length > 0 ? loadedObjects[0] : Resources.Load<Config>(FileName);
+
+#if UNITY_EDITOR
+            if (instance == null)
+            {
+                CreateConfig();
+                return Locate();
+            }
+#endif
+
+            return instance;
         }
 
         public string DefaultLocaleId;
-        public LocalePreset[] Locales;
+        public LocalePreset[] Locales = new LocalePreset[0];
+
+        private void OnValidate()
+        {
+            Localization.ConfigChanged();
+        }
     }
 }

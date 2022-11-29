@@ -9,7 +9,7 @@
 
         public static UnityEngine.Object LocalizeAsset(this string key, UnityEngine.Object fallback = default)
         {
-            return Localization.GetAsset(key, fallback);
+            return Localization.GetObject(key, fallback);
         }
     }
 }

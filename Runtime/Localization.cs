@@ -1,29 +1,114 @@
 ﻿using System;
 using System.Globalization;
+using System.Linq;
 using UnityEngine;
 
 namespace L11
 {
+    public delegate void LocaleChangedDelegate(Locale locale);
+
+    public interface ILocaleChangedHandler
+    {
+        void OnLocaleChanged(Locale locale);
+    }
+
+    public interface ILocaleChangedInEditorHandler
+    {
+        void OnLocaleChangedInEditor(Locale locale);
+    }
+
     public class Localization
     {
-        static Localization()
-        {
-            Init(Config.Locate());
-        }
+        public static event LocaleChangedDelegate LocaleChanged;
 
         public static Locale Locale
         { get { return activeLocale; } }
 
         private static Locale activeLocale;
         private static Locale defaultLocale;
-        private static Config config;
 
-        private static void Init(Config config)
+        static Localization()
         {
-            Localization.config = config;
+            Init();
+        }
 
-            defaultLocale = CreateDefaultLocale() ?? CreateFallbackLocale();
-            activeLocale = CreateSystemLocale() ?? defaultLocale;
+        internal static void ConfigChanged()
+        {
+            Init();
+        }
+
+        private static void Init()
+        {
+            var config = Config.Locate();
+
+            defaultLocale = CreateDefaultLocale(config) ?? CreateFallbackLocale();
+            SetLocale(CreateSystemLocale(config) ?? defaultLocale);
+        }
+
+        public static void SetLocale(string id)
+        {
+            var config = Config.Locate();
+
+            for (int i = 0; i < config.Locales.Length; i++)
+            {
+                if (config.Locales[i].Id == id)
+                {
+                    SetLocale(new Locale(config.Locales[i]));
+                    return;
+                }
+            }
+        }
+
+        private static void SetLocale(Locale locale)
+        {
+            activeLocale = locale;
+
+            LocaleChanged?.Invoke(activeLocale);
+
+            if (Application.isPlaying)
+            {
+                foreach (var behaviour in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>().OfType<ILocaleChangedHandler>())
+                {
+                    behaviour.OnLocaleChanged(activeLocale);
+                }
+            }
+            else
+            {
+                foreach (var behaviour in UnityEngine.Object.FindObjectsOfType<MonoBehaviour>().OfType<ILocaleChangedInEditorHandler>())
+                {
+                    behaviour.OnLocaleChangedInEditor(activeLocale);
+                }
+            }
+        }
+
+        public static bool TryFindTerm(string key, out Term result)
+        {
+            if (activeLocale.Preset.TryFindTerm(key, out result))
+            {
+                return true;
+            }
+
+            if (defaultLocale.Preset.TryFindTerm(key, out result))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public static bool TryFindAsset(string key, out LocalizableAsset asset)
+        {
+            if (activeLocale.Preset.TryFindAsset(key, out asset))
+            {
+                return true;
+            }
+
+            if (defaultLocale.Preset.TryFindAsset(key, out asset))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         public static string GetString(string key, string fallback = default)
@@ -33,48 +118,33 @@ namespace L11
                 throw new ArgumentNullException(nameof(key));
             }
 
-            if (activeLocale.Preset.TryFindTerm(key, out var term))
+            if (TryFindTerm(key, out var term))
             {
                 return term.Value;
             }
 
-            if (defaultLocale.Preset.TryFindTerm(key, out term))
-            {
-                return term.Value;
-            }
-
-            if (fallback == null)
-            {
-                return key;
-            }
-
-            return fallback;
+            return fallback == default ? key : fallback;
         }
 
-        public static UnityEngine.Object GetAsset(string key, UnityEngine.Object fallback = default)
+        public static UnityEngine.Object GetObject(string key, UnityEngine.Object fallback = default)
         {
-            return GetAssetInternal(key, fallback);
+            return GetObjectInternal(key, fallback);
         }
 
-        public static TAsset GetAsset<TAsset>(string key, TAsset fallback = default)
-            where TAsset: UnityEngine.Object
+        public static TObject GetObject<TObject>(string key, TObject fallback = default)
+            where TObject: UnityEngine.Object
         {
-            return GetAssetInternal(key, fallback) as TAsset;
+            return GetObjectInternal(key, fallback) as TObject;
         }
 
-        private static UnityEngine.Object GetAssetInternal(string key, UnityEngine.Object fallback = default)
+        private static UnityEngine.Object GetObjectInternal(string key, UnityEngine.Object fallback = default)
         {
             if (key == null)
             {
                 throw new ArgumentNullException(nameof(key));
             }
 
-            if (activeLocale.Preset.TryFindAsset(key, out var asset))
-            {
-                return asset.Value;
-            }
-
-            if (defaultLocale.Preset.TryFindAsset(key, out asset))
+            if (TryFindAsset(key, out var asset))
             {
                 return asset.Value;
             }
@@ -82,9 +152,9 @@ namespace L11
             return fallback;
         }
 
-        private static Locale CreateSystemLocale()
+        private static Locale CreateSystemLocale(Config config)
         {
-            var preset = TryFindPreset(CultureInfo.CurrentCulture, out var presetCulture);
+            var preset = TryFindPreset(config, CultureInfo.CurrentCulture, out var presetCulture);
             if (preset != null)
             {
                 return new Locale(preset, presetCulture);
@@ -93,7 +163,7 @@ namespace L11
             return null;
         }
 
-        private static Locale CreateDefaultLocale()
+        private static Locale CreateDefaultLocale(Config config)
         {
             if (config.Locales.Length == 0)
             {
@@ -122,7 +192,7 @@ namespace L11
             return new Locale(preset);
         }
 
-        private static LocalePreset TryFindPreset(CultureInfo culture, out CultureInfo presetCulture)
+        private static LocalePreset TryFindPreset(Config config, CultureInfo culture, out CultureInfo presetCulture)
         {
             if (culture == null)
             {
