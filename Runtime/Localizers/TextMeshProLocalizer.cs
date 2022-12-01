@@ -6,6 +6,7 @@ using UnityEngine;
 namespace L11.Localizers
 {
     [RequireComponent(typeof(TMP_Text))]
+    [LocalizerUseKeysFrom(LocalizerKeySource.Terms)]
     public class TextMeshProLocalizer : BaseLocalizer
     {
         [SerializeField]
@@ -25,7 +26,7 @@ namespace L11.Localizers
 
         protected override void Localize()
         {
-            if (!Localization.TryFindTerm(key, out var term))
+            if (string.IsNullOrEmpty(key) || !Localization.TryFindTerm(key, out var term))
             {
                 term = fallback;
             }

@@ -4,6 +4,14 @@ namespace L11.Localizers
 {
     public abstract class BaseLocalizer : MonoBehaviour, ILocaleChangedHandler
     {
+        public string Key
+        {
+            get
+            {
+                return key;
+            }
+        }
+
         [SerializeField]
         protected string key;
 

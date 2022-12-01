@@ -31,7 +31,7 @@ namespace L11
         }
 #endif
 
-        internal static Config Locate()
+        public static Config Locate()
         {
             var loadedObjects = Resources.FindObjectsOfTypeAll<Config>();
             var instance = loadedObjects.Length > 0 ? loadedObjects[0] : Resources.Load<Config>(FileName);

@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using UnityEngine;
+
+[assembly: InternalsVisibleTo("L11.Editor")]
 
 namespace L11
 {
@@ -43,6 +46,21 @@ namespace L11
 
             defaultLocale = CreateDefaultLocale(config) ?? CreateFallbackLocale();
             SetLocale(CreateSystemLocale(config) ?? defaultLocale);
+        }
+
+        public static bool HasLocale(string id)
+        {
+            var config = Config.Locate();
+
+            for (int i = 0; i < config.Locales.Length; i++)
+            {
+                if (config.Locales[i].Id == id)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static void SetLocale(string id)

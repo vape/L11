@@ -9,4 +9,12 @@ namespace L11
         [SerializeField]
         public UnityEngine.Object Value;
     }
+
+    [Serializable]
+    public class LocalizableAsset<TAssetType> : LocalizableAsset
+        where TAssetType: UnityEngine.Object
+    {
+        public TAssetType TypedValue
+        { get { return Value as TAssetType; } }
+    }
 }
