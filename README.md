@@ -17,6 +17,14 @@ Any string can be used as key and localized using extension method:
 string value1 = "key1".Localize();
 string value2 = "key2".Localize(fallback: "No value")
 ```
+#### Pluralization
+Almost all languages can use pluralization feature based on [gettest plural rules](https://www.gnu.org/software/gettext/manual/gettext.html#Plural-forms).
+```csharp
+// keys:
+// "coins": "{0} {0:Coins|Coin}"
+string value = "coins".Localize(1); // '1 Coin'
+string value = "coins".Localize(1234); // '1234 Coins' 
+```
 
 ### Components
 For now, it has just a few helper components:
