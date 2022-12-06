@@ -64,6 +64,8 @@ namespace L11
 
         public string ToString(string format, IFormatProvider formatProvider)
         {
+            var provider = formatProvider as CultureInfo ?? Localization.Locale.Culture;
+
             if (format == null)
             {
                 if (String != null)
@@ -78,12 +80,17 @@ namespace L11
 
             if (format.IndexOf(Separator) == -1)
             {
+                // if its a number and not string, fallback to number format
+                if (String == null)
+                {
+                    return Number.ToString(format, provider);
+                }
+
                 return format;
             }
 
             var variants = format.Split(Separator);
-            var culture = formatProvider as CultureInfo ?? Localization.Locale.Culture;
-            var form = culture == null ? 0 : Plural.GetForm(culture.Name, Number);
+            var form = Plural.GetForm(provider.Name, Number);
 
             return variants[Math.Min(variants.Length - 1, form)];
         }
